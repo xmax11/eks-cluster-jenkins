@@ -1,4 +1,4 @@
-// --- Configuration Variables ----
+// --- Configuration Variables -----
 def AWS_REGION = "us-east-1" 					 // Your AWS region (matches variables.tf)
 def EKS_CLUSTER_NAME = "jenkins-managed-eks" 	 // Matches default in variables.tf
 def KUBE_CREDENTIALS_ID = "agent-vinod-ki-key" // <<<<< IMPORTANT: REPLACE WITH YOUR AWS CREDENTIAL ID
