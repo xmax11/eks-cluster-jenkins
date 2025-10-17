@@ -19,11 +19,11 @@ pipeline {
     environment {
         // Set environment variables for Terraform and AWS CLI access
         // AWS creds auto-provided by IAM role on EC2 instance
-        TF_VAR_cluster_name = EKS_CLUSTER_NAME
-        TF_VAR_aws_region  = AWS_REGION
+        TF_VAR_cluster_name = "${EKS_CLUSTER_NAME}"
+        TF_VAR_aws_region  = "${AWS_REGION}"
         TF_LOG_LEVEL = "INFO"
-        AWS_REGION = AWS_REGION // For AWS CLI
-        DESTROY_TIMEOUT_SECONDS = DESTROY_TIMEOUT_SECONDS
+        AWS_REGION = "${AWS_REGION}" // For AWS CLI
+        DESTROY_TIMEOUT_SECONDS = "${DESTROY_TIMEOUT_SECONDS}"
     }
 
     stages {
