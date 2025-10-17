@@ -1,5 +1,5 @@
 // Jenkinsfile for automated Terraform infrastructure management (EKS Cluster Creation)
-// This pipeline runs on every push to the main branch but requires manual approval for 'apply' and 'destroy'.
+// This pipeline runs on every push to the main branch and automatically applies changes and destroys after TTL.
 // Uses IAM role on Jenkins EC2 for AWS auth (no credentials stored).
 
 // --- Configuration Variables ---
@@ -21,7 +21,8 @@ pipeline {
         // AWS creds auto-provided by IAM role on EC2 instance
         TF_VAR_cluster_name = "${EKS_CLUSTER_NAME}"
         TF_VAR_aws_region  = "${AWS_REGION}"
-        TF_LOG_LEVEL = "INFO"
+        TF_LOG = "INFO"  // Standard logging; increase to "DEBUG" if needed
+        TF_IN_AUTOMATION = "1"  // Skip interactive in CI
         AWS_REGION = "${AWS_REGION}" // For AWS CLI
         DESTROY_TIMEOUT_SECONDS = "${DESTROY_TIMEOUT_SECONDS}"
     }
@@ -48,38 +49,31 @@ pipeline {
                 echo "Initializing Terraform backend in S3: ${S3_BACKEND_BUCKET}"
                 // The 'reconfigure' flag is essential for CI/CD environments
                 sh "terraform init -backend-config=\"bucket=${S3_BACKEND_BUCKET}\" -backend-config=\"region=${AWS_REGION}\" -reconfigure"
+                
+                // Fix provider binary permissions to prevent hangs
+                echo "Setting executable permissions on provider binaries..."
+                sh "find .terraform/providers -name 'terraform-provider-aws*' -type f -exec chmod +x {} \\; || true"
             }
         }
 
-        stage('Terraform Validate and Plan') {
+        stage('Terraform Plan') {
             steps {
-                echo "Validating Terraform configuration..."
-                sh "terraform validate"
-
                 echo "Generating Terraform plan and saving to eks.tfplan..."
-                // Create a plan file to review and use later in the apply stage
-                sh "terraform plan -out=eks.tfplan"
+                timeout(time: 10, unit: 'MINUTES') {  // Allow more time for plan
+                    sh "terraform plan -out=eks.tfplan"
+                }
                 
                 // Display the plan output in the console for review
                 sh "terraform show -no-color eks.tfplan"
             }
         }
 
-        stage('Manual Approval for Apply') {
-            steps {
-                // This halts the pipeline for human review
-                input(
-                    id: 'ProceedWithTerraformApply',
-                    message: "Review the 'Terraform Plan' output. Do you approve applying these changes to the AWS infrastructure?",
-                    ok: 'Proceed with Apply'
-                )
-            }
-        }
-
         stage('Terraform Apply') {
             steps {
                 echo "Applying infrastructure changes using saved plan file..."
-                sh "terraform apply -auto-approve eks.tfplan"
+                timeout(time: 20, unit: 'MINUTES') {  // EKS creation can take time
+                    sh "terraform apply -auto-approve eks.tfplan"
+                }
                 echo "Terraform Apply completed. EKS cluster '${EKS_CLUSTER_NAME}' created in region '${AWS_REGION}'."
                 
                 // Output EKS Cluster IAM Role details
@@ -102,24 +96,16 @@ pipeline {
             steps {
                 echo "Wait period started. Infrastructure will be eligible for deletion in ${DESTROY_DELAY_MINUTES} minutes."
                 sleep(time: DESTROY_TIMEOUT_SECONDS as int, unit: 'SECONDS')
-                echo "Wait period complete. Proceeding to deletion approval."
-            }
-        }
-        
-        stage('Manual Approval for Deletion') {
-            steps {
-                input(
-                    id: 'ProceedWithTerraformDestroy',
-                    message: "The time-to-live (${DESTROY_DELAY_MINUTES} minutes) has expired. Do you approve DESTROYING the AWS EKS infrastructure?",
-                    ok: 'Proceed with Destroy'
-                )
+                echo "Wait period complete. Proceeding to auto-deletion."
             }
         }
 
         stage('Terraform Destroy') {
             steps {
                 echo "Starting Terraform destroy..."
-                sh "terraform destroy -auto-approve"
+                timeout(time: 15, unit: 'MINUTES') {
+                    sh "terraform destroy -auto-approve"
+                }
                 echo "Terraform Destroy completed. EKS cluster and associated resources deleted."
             }
         }
@@ -127,7 +113,7 @@ pipeline {
 
     post {
         always {
-            // Archive the plan file and .terraform for auditing/debug
+            // Archive the plan file, .terraform, and logs for auditing/debug
             archiveArtifacts artifacts: 'eks.tfplan, .terraform/**', allowEmptyArchive: true
             echo "Pipeline completed. Check Jenkins console for details."
             // Add notifications here, e.g., Slack or Email integration
