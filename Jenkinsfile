@@ -32,11 +32,19 @@ pipeline {
                 echo "Verifying AWS IAM role access..."
                 sh "aws sts get-caller-identity"
                 echo "AWS auth successful. Role: Full admin access confirmed."
+                
+                // Log Terraform version for debugging
+                echo "Terraform version:"
+                sh "terraform version"
             }
         }
 
         stage('Terraform Init') {
             steps {
+                // Clean cache to fix provider schema issues
+                echo "Cleaning .terraform cache to ensure fresh provider download..."
+                sh "rm -rf .terraform/"
+                
                 echo "Initializing Terraform backend in S3: ${S3_BACKEND_BUCKET}"
                 // The 'reconfigure' flag is essential for CI/CD environments
                 sh "terraform init -backend-config=\"bucket=${S3_BACKEND_BUCKET}\" -backend-config=\"region=${AWS_REGION}\" -reconfigure"
@@ -119,8 +127,8 @@ pipeline {
 
     post {
         always {
-            // Archive the plan file for auditing
-            archiveArtifacts artifacts: 'eks.tfplan', allowEmptyArchive: true
+            // Archive the plan file and .terraform for auditing/debug
+            archiveArtifacts artifacts: 'eks.tfplan, .terraform/**', allowEmptyArchive: true
             echo "Pipeline completed. Check Jenkins console for details."
             // Add notifications here, e.g., Slack or Email integration
         }
@@ -129,6 +137,8 @@ pipeline {
         }
         failure {
             echo "Pipeline failed! Check logs for errors (e.g., Terraform syntax, S3 backend issues)."
+            // On failure, clean up workspace partially to avoid cache pollution
+            sh "rm -rf .terraform/"
         }
     }
 }
