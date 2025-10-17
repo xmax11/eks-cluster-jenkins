@@ -28,10 +28,10 @@ output "kubeconfig_command" {
 
 output "eks_cluster_iam_role_name" {
   description = "Name of the IAM role associated with the EKS cluster."
-  value       = module.eks.iam_role_name  # References "EKS-Cluster" from main.tf
+  value       = module.eks.cluster_iam_role_name  # Correct module output for "EKS-Cluster"
 }
 
 output "eks_cluster_iam_role_arn" {
   description = "ARN of the IAM role associated with the EKS cluster."
-  value       = module.eks.iam_role_arn
+  value       = module.eks.cluster_iam_role_arn  # Correct module output
 }
