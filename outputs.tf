@@ -21,3 +21,17 @@ output "kubeconfig_command" {
   description = "Command to configure kubectl to connect to the cluster."
   value       = "aws eks --region ${var.aws_region} update-kubeconfig --name ${module.eks.cluster_name}"
 }
+
+# ----------------------------------------------------------------------
+# EKS IAM Role Outputs
+# ----------------------------------------------------------------------
+
+output "eks_cluster_iam_role_name" {
+  description = "Name of the IAM role associated with the EKS cluster."
+  value       = module.eks.iam_role_name  # References "EKS-Cluster" from main.tf
+}
+
+output "eks_cluster_iam_role_arn" {
+  description = "ARN of the IAM role associated with the EKS cluster."
+  value       = module.eks.iam_role_arn
+}
