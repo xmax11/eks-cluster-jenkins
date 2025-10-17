@@ -1,5 +1,5 @@
 // Jenkinsfile for automated Terraform infrastructure management (EKS Cluster Creation)
-// This pipeline runs on every push to the main branch but requires manual approval for 'apply' and 'destroy'.
+// This pipeline runs on every push to the main branch but requires manual approval for 'apply' and 'destroy '.
 
 // --- Configuration Variables ---
 def AWS_REGION = "us-east-1"                    // Your AWS region (matches variables.tf)
