@@ -1,4 +1,4 @@
-// Jenkinsfile for automated Terraform infrastructure management (EKS Cluster Creation)
+// Jenkinsfile for automated Terraform infrastructure management  (EKS Cluster Creation)
 // This pipeline runs on every push to the main branch and automatically applies changes and destroys after TTL.
 // Uses IAM role on Jenkins EC2 for AWS auth (no credentials stored).
 
