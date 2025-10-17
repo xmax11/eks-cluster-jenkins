@@ -1,4 +1,4 @@
-// Jenkinsfile for automated Terraform infrastructure management (EKS Cluster Creation)
+// Jenkinsfile for automated Terraform infrastructure management  (EKS Cluster Creation)
 // This pipeline runs on every push to the main branch but requires manual approval for 'apply' and 'destroy'.
 
 // --- Configuration Variables ---
